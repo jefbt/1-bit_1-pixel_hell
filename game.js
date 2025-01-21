@@ -50,6 +50,23 @@ class PixelGame {
         
         this.gameOverStartTime = 0;  // Track when game over started
         this.minRestartDelay = 1000; // 1 second minimum delay before restart
+        
+        this.paused = false;
+        
+        // Add window focus/blur listeners
+        window.addEventListener('blur', () => {
+            if (this.gameState === 'playing') {
+                this.paused = true;
+            }
+        });
+        
+        window.addEventListener('focus', () => {
+            if (this.paused) {
+                this.paused = false;
+                this.lastTime = performance.now(); // Reset last time to prevent huge time jump
+                requestAnimationFrame(this.gameLoop.bind(this));
+            }
+        });
     }
     
     spawnPixel() {
@@ -80,6 +97,14 @@ class PixelGame {
     }
     
     handleClick(event) {
+        // Add pause handling
+        if (this.paused) {
+            this.paused = false;
+            this.lastTime = performance.now();
+            requestAnimationFrame(this.gameLoop.bind(this));
+            return;
+        }
+
         const rect = this.canvas.getBoundingClientRect();
         
         // Check if clicked on reset leaderboard button (only on start or game over screens)
@@ -206,6 +231,11 @@ class PixelGame {
             }
             this.drawGameOver();
             requestAnimationFrame(this.gameLoop.bind(this));
+            return;
+        }
+        
+        if (this.paused) {
+            this.drawPauseScreen();
             return;
         }
         
@@ -390,6 +420,23 @@ class PixelGame {
                 this.canvas.height - 40
             );
         }
+    }
+    
+    drawPauseScreen() {
+        // Draw the current game state
+        this.draw();
+        
+        // Add pause overlay
+        this.ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+        
+        const colors = this.getColors();
+        this.ctx.fillStyle = colors.foreground;
+        this.ctx.textAlign = 'center';
+        this.ctx.font = '36px Arial';
+        this.ctx.fillText('PAUSED', this.canvas.width / 2, this.canvas.height / 2);
+        this.ctx.font = '24px Arial';
+        this.ctx.fillText('Click to resume', this.canvas.width / 2, this.canvas.height / 2 + 40);
     }
 }
 
